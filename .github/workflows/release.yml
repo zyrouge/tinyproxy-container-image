@@ -1,0 +1,32 @@
+name: Publish
+
+on:
+    workflow_dispatch:
+    schedule:
+        - cron: "0 0 * * *"
+
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        outputs:
+            tinyproxy_version: ${{ steps.version.outputs.tinyproxy_version }}
+            image_present: ${{ steps.version.outputs.image_present }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Check if build is required
+              id: version
+              run: |
+                  find . -type f -name "*.sh" -exec chmod +x {} \;
+                  version=$(./needs_release.sh)
+                  echo "X_TINYPROXY_VERSION=$version" >> $GITHUB_ENV
+
+            - name: Build and publish image
+              if: ${{ env.X_TINYPROXY_VERSION != '' }}
+              env:
+                  TINYPROXY_VERSION: ${{ steps.version.outputs.tinyproxy_version }}
+              run: ./build.sh
