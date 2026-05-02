@@ -9,24 +9,42 @@ permissions:
     contents: read
     packages: write
 
+env:
+    IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/tinyproxy
+    X_TINYPROXY_VERSION: ""
+
 jobs:
     release:
         runs-on: ubuntu-latest
-        outputs:
-            tinyproxy_version: ${{ steps.version.outputs.tinyproxy_version }}
-            image_present: ${{ steps.version.outputs.image_present }}
         steps:
             - uses: actions/checkout@v4
 
-            - name: Check if build is required
+            - name: Check if release is needed
               id: version
+              env:
+                  GH_TOKEN: ${{ github.token }}
               run: |
                   find . -type f -name "*.sh" -exec chmod +x {} \;
                   version=$(./needs_release.sh)
                   echo "X_TINYPROXY_VERSION=$version" >> $GITHUB_ENV
 
-            - name: Build and publish image
+            - name: Build image
               if: ${{ env.X_TINYPROXY_VERSION != '' }}
               env:
-                  TINYPROXY_VERSION: ${{ steps.version.outputs.tinyproxy_version }}
+                  GH_TOKEN: ${{ github.token }}
+                  TINYPROXY_VERSION: ${{ env.X_TINYPROXY_VERSION }}
               run: ./build.sh
+
+            - name: Login to GHCR
+              uses: redhat-actions/podman-login@v1
+              if: ${{ env.X_TINYPROXY_VERSION != '' }}
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ github.token }}
+
+            - name: Publish image to GHCR
+              if: ${{ env.X_TINYPROXY_VERSION != '' }}
+              run: |
+                  podman push ${{ env.IMAGE_NAME }}:${{ env.X_TINYPROXY_VERSION }}
+                  podman push ${{ env.IMAGE_NAME }}:latest
