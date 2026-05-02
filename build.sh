@@ -31,5 +31,5 @@ podman build \
     --build-arg CREATED="$CREATED" \
     --build-arg TINYPROXY_VERSION="$TINYPROXY_VERSION" \
     --build-arg TINYPROXY_REVISION="$TINYPROXY_REVISION" \
-    --platform linux/amd64,linux/arm64 \
+    --platform linux/amd64 \
     --manifest "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" .
