@@ -46,5 +46,5 @@ jobs:
             - name: Publish image to GHCR
               if: ${{ env.X_TINYPROXY_VERSION != '' }}
               run: |
-                  podman push ${{ env.IMAGE_NAME }}:${{ env.X_TINYPROXY_VERSION }}
-                  podman push ${{ env.IMAGE_NAME }}:latest
+                  podman push tinyproxy:${{ env.X_TINYPROXY_VERSION }} ${{ env.IMAGE_NAME }}:${{ env.X_TINYPROXY_VERSION }}
+                  podman push tinyproxy:${{ env.X_TINYPROXY_VERSION }} ${{ env.IMAGE_NAME }}:latest
