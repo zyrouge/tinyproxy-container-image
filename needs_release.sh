@@ -13,9 +13,11 @@ if [ -z "${TINYPROXY_VERSION:-}" ]; then
     fi
 fi
 
-FOUND_VERSION=$(docker manifest inspect "$IMAGE_NAME:$TINYPROXY_VERSION" > /dev/null 2>&1 && echo "found" || echo "")
-if [ "$FOUND_VERSION" = "found" ]; then
-    exit 1
+if [ "${FORCE:-}" != "true" ]; then
+    FOUND_VERSION=$(podman manifest inspect "$IMAGE_NAME:$TINYPROXY_VERSION" > /dev/null 2>&1 && echo "found" || echo "")
+    if [ "$FOUND_VERSION" = "found" ]; then
+        exit 1
+    fi
 fi
 
 echo "$TINYPROXY_VERSION"

@@ -3,6 +3,7 @@
 set -e
 
 TINYPROXY_GIT_URL="https://github.com/tinyproxy/tinyproxy"
+LOCAL_IMAGE_NAME="localhost/tinyproxy"
 
 if [ -z "${TINYPROXY_VERSION:-}" ]; then
     TINYPROXY_VERSION=$(gh release list -R "$TINYPROXY_GIT_URL" --exclude-drafts --exclude-pre-releases -L 1 --json tagName | jq -r '.[0].tagName')
@@ -22,8 +23,13 @@ fi
 
 CREATED=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
 
+podman manifest rm "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" > /dev/null 2>&1 || true
+
+podman manifest create "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION"
+
 podman build \
     --build-arg CREATED="$CREATED" \
     --build-arg TINYPROXY_VERSION="$TINYPROXY_VERSION" \
     --build-arg TINYPROXY_REVISION="$TINYPROXY_REVISION" \
-    -t "tinyproxy:$TINYPROXY_VERSION" .
+    --platform linux/amd64,linux/arm64 \
+    --manifest "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" .
