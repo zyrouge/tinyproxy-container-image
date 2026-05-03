@@ -1,35 +1,45 @@
 #!/bin/sh
 
-set -e
+set -eu
 
-TINYPROXY_GIT_URL="https://github.com/tinyproxy/tinyproxy"
-LOCAL_IMAGE_NAME="localhost/tinyproxy"
+ROOT_DIR="$(dirname "$(realpath "$0")")"
 
-if [ -z "${TINYPROXY_VERSION:-}" ]; then
-    TINYPROXY_VERSION=$(gh release list -R "$TINYPROXY_GIT_URL" --exclude-drafts --exclude-pre-releases -L 1 --json tagName | jq -r '.[0].tagName')
-    if [ "$?" -ne 0 ] || [ -z "$TINYPROXY_VERSION" ]; then
-        echo "Failed to get determine version"
-        exit 1
+. "$ROOT_DIR/_utils.sh"
+
+get_release_info_key() {
+    if ! [ -f "$DIST_DIR/$1" ]; then
+        "$ROOT_DIR/release-info.sh"
     fi
+    cat "$DIST_DIR/$1"
+}
+
+echo "Fetching version..."
+if [ -z "${TINYPROXY_VERSION:-}" ]; then
+    TINYPROXY_VERSION="$(get_release_info_key version.txt)"
 fi
 
+echo "Fetching revision..."
 if [ -z "${TINYPROXY_REVISION:-}" ]; then
-    TINYPROXY_REVISION=$(git ls-remote --tags --refs "$TINYPROXY_GIT_URL" "refs/tags/$TINYPROXY_VERSION" | cut -f1)
-    if [ "$?" -ne 0 ] || [ -z "$TINYPROXY_REVISION" ]; then
-        echo "Failed to determine revision"
-        exit 1
-    fi
+    TINYPROXY_REVISION="$(get_release_info_key revision.txt)"
 fi
 
 CREATED=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
 
+echo "Removing old image..."
+podman rmi "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" > /dev/null 2>&1 || true
+
+echo "Removing old manifest..."
 podman manifest rm "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" > /dev/null 2>&1 || true
 
+echo "Creating manifest..."
 podman manifest create "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION"
 
+echo "Building image..."
 podman build \
     --build-arg CREATED="$CREATED" \
     --build-arg TINYPROXY_VERSION="$TINYPROXY_VERSION" \
     --build-arg TINYPROXY_REVISION="$TINYPROXY_REVISION" \
     --platform linux/amd64 \
-    --manifest "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" .
+    --manifest "$LOCAL_IMAGE_NAME:$TINYPROXY_VERSION" \
+    "$ROOT_DIR"
+echo "Built image $LOCAL_IMAGE_NAME:$TINYPROXY_VERSION"
