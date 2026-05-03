@@ -13,4 +13,4 @@ podman run --rm \
 
 # License
 
-[MIT](./LICENSE)
+[Unlicense](./LICENSE)
